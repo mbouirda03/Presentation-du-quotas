@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quotas de Disque sous Linux</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 20px;
+            background: #f8f9fa;
+            flex-wrap: wrap;
+        }
+
+        .nav-btn {
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .nav-btn.active {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .intro-box {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .intro-box h2 {
+            color: #d63031;
+            margin-bottom: 15px;
+            font-size: 2em;
+        }
+
+        .intro-box ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .intro-box li {
+            padding: 10px 0 10px 30px;
+            position: relative;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+
+        .intro-box li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #00b894;
+            font-weight: bold;
+            font-size: 1.3em;
+        }
+
+        .step-container {
+            margin-bottom: 40px;
+        }
+
+        .step {
+            background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            border-left: 5px solid #00acc1;
+            transition: transform 0.3s ease;
+        }
+
+        .step:hover {
+            transform: translateX(10px);
+        }
+
+        .step h3 {
+            color: #00695c;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .step-number {
+            display: inline-block;
+            background: #00acc1;
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 35px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .command-box {
+            background: #2d3436;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            margin: 15px 0;
+            overflow-x: auto;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        .command-box:before {
+            content: "$ ";
+            color: #74b9ff;
+            font-weight: bold;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #00b894;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background 0.3s ease;
+        }
+
+        .copy-btn:hover {
+            background: #00d2a0;
+        }
+
+        .info-box {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .info-box h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .warning-box {
+            background: #f8d7da;
+            border-left: 5px solid #dc3545;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .warning-box h4 {
+            color: #721c24;
+            margin-bottom: 10px;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        tr:hover {
+            background: #f5f5f5;
+        }
+
+        .image-placeholder {
+            width: 100%;
+            height: 300px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5em;
+            margin: 20px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .image-placeholder:before {
+            content: "🖥️";
+            font-size: 5em;
+            opacity: 0.3;
+            position: absolute;
+        }
+
+        /* Carte Mentale Styles */
+        .mindmap-container {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 30px;
+            border-radius: 15px;
+            margin: 40px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mindmap-title {
+            text-align: center;
+            color: #2d3436;
+            font-size: 2em;
+            margin-bottom: 30px;
+            font-weight: 700;
+        }
+
+        .mindmap-center {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            margin: 0 auto 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            box-shadow: 0 10px 30px rgba(255, 107, 107, 0.4);
+            position: relative;
+            z-index: 2;
+        }
+
+        .mindmap-branch {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            position: relative;
+        }
+
+        .mindmap-node {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: calc(25% - 20px);
+            min-width: 250px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            position: relative;
+        }
+
+        .mindmap-node:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+
+        .mindmap-node h4 {
+            color: #2d3436;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            border-bottom: 2px solid #74b9ff;
+            padding-bottom: 5px;
+        }
+
+        .mindmap-subnode {
+            background: #f8f9fa;
+            padding: 10px 15px;
+            margin: 8px 0;
+            border-radius: 8px;
+            border-left: 4px solid #00b894;
+            font-size: 0.95em;
+        }
+
+        .mindmap-subnode.warning {
+            border-left-color: #ff7675;
+            background: #ffeaa7;
+        }
+
+        .mindmap-subnode.info {
+            border-left-color: #74b9ff;
+            background: #dfe6e9;
+        }
+
+        .mindmap-connection {
+            position: absolute;
+            height: 2px;
+            background: linear-gradient(90deg, #74b9ff, #a29bfe);
+            z-index: 1;
+        }
+
+        .details-box {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            padding: 25px;
+            border-radius: 15px;
+            margin: 25px 0;
+            border-left: 5px solid #0984e3;
+        }
+
+        .details-box h3 {
+            color: #2d3436;
+            margin-bottom: 15px;
+            font-size: 1.8em;
+        }
+
+        .details-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .details-item {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .details-item h4 {
+            color: #d63031;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .footer {
+            background: #2d3436;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            margin-top: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .nav-btn {
+                font-size: 0.9em;
+                padding: 10px 15px;
+            }
+
+            .mindmap-node {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗄️ Quotas de Disque sous Linux</h1>
+            <p>Formation BTS - 2ème Année - Guide Complet</p>
+        </div>
+
+        <div class="nav-buttons">
+            <button class="nav-btn active" onclick="showSection('intro')">Introduction</button>
+            <button class="nav-btn" onclick="showSection('installation')">Installation</button>
+            <button class="nav-btn" onclick="showSection('config')">Configuration</button>
+            <button class="nav-btn" onclick="showSection('test')">Tests</button>
+            <button class="nav-btn" onclick="showSection('gestion')">Gestion</button>
+            <button class="nav-btn" onclick="showSection('mindmap')">Carte Mentale</button>
+        </div>
+
+        <div class="content">
+            <!-- Introduction Section -->
+            <div id="intro" class="section active">
+                <div class="intro-box">
+                    <h2>🎯 Pourquoi utiliser les quotas de disque ?</h2>
+                    <ul>
+                        <li>Éviter la saturation rapide de l'espace disque par un utilisateur</li>
+                        <li>Contrôler l'utilisation des ressources par utilisateur ou groupe</li>
+                        <li>Permettre un suivi précis de la consommation de stockage</li>
+                        <li>Optimiser la gestion du stockage sur les serveurs multi-utilisateurs</li>
+                        <li>Prévenir les abus d'espace disque dans les environnements partagés</li>
+                        <li>Faciliter la planification des besoins en stockage</li>
+                    </ul>
+                </div>
+
+                <div class="details-box">
+                    <h3>📊 Avantages détaillés des quotas</h3>
+                    <div class="details-list">
+                        <div class="details-item">
+                            <h4>🎯 Contrôle Précis</h4>
+                            <p>Les quotas permettent de définir des limites spécifiques par utilisateur ou groupe, offrant un contrôle granulaire sur l'utilisation du stockage.</p>
+                        </div>
+                        <div class="details-item">
+                            <h4>🛡️ Prévention des Abus</h4>
+                            <p>Empêche un utilisateur de monopoliser l'espace disque au détriment des autres utilisateurs du système.</p>
+                        </div>
+                        <div class="details-item">
+                            <h4>📈 Optimisation des Ressources</h4>
+                            <p>Permet une meilleure allocation et utilisation des ressources de stockage disponibles.</p>
+                        </div>
+                        <div class="details-item">
+                            <h4>🔍 Surveillance Facilitée</h4>
+                            <p>Offre des outils de monitoring pour suivre en temps réel l'utilisation du disque.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <h4>📌 Définition Technique</h4>
+                    <p>Un quota de disque est une limitation de l'espace de stockage alloué à un utilisateur ou à un groupe d'utilisateurs sur un système Linux. Il permet à l'administrateur de contrôler la quantité de données que chaque utilisateur peut stocker sur une partition spécifique. Les quotas fonctionnent au niveau du système de fichiers et peuvent être définis pour le nombre de blocs (espace disque) et/ou le nombre d'inodes (nombre de fichiers).</p>
+                </div>
+
+                <div class="warning-box">
+                    <h4>⚠️ Points d'Attention</h4>
+                    <p>Les quotas sont appliqués par partition et non par répertoire. Pour qu'un quota soit efficace, l'utilisateur doit stocker ses fichiers sur la partition où le quota est activé. Les quotas ne fonctionnent que sur les systèmes de fichiers qui les supportent (ext3, ext4, xfs, etc.).</p>
+                </div>
+            </div>
+
+            <!-- Installation Section -->
+            <div id="installation" class="section">
+                <h2 style="color: #2d3436; margin-bottom: 30px;">📦 Installation et Configuration Initiale</h2>
+
+                <div class="info-box">
+                    <h4>📋 Prérequis</h4>
+                    <p>Avant de commencer, assurez-vous d'avoir les privilèges root ou sudo. Vérifiez également que votre système de fichiers supporte les quotas (ext3, ext4, xfs, etc.).</p>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-number">1</span>Installation du paquet quota</h3>
+                    <p>Première étape : installer le paquet de gestion des quotas. Ce paquet contient tous les outils nécessaires pour gérer les quotas sous Linux.</p>
+                    <div class="command-box">
+                        <button class="copy-btn" onclick="copyCommand(this)">Copier</button>
+                        apt-get install quota
+                    </div>
+                    <div class="info-box" style="margin-top: 15px;">
+                        <h4>💡 Alternative pour d'autres distributions</h4>
+                        <p><strong>CentOS/RHEL/Fedora :</strong> <code>yum install quota</code><br>
+                        <strong>Arch Linux :</strong> <code>pacman -S quota-tools</code><br>
+                        <strong>openSUSE :</strong> <code>zypper install quota</code></p>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-number">2</span>Configuration du fichier /etc/fstab</h3>
+                    <p>Déclarer les quotas sur la partition du disque dur. Cette étape est cruciale car elle indique au système d'activer le support des quotas au niveau du système de fichiers.</p>
+                    <div class="command-box">
+                        <button class="copy-btn" onclick="copyCommand(this)">Copier</button>
+                        /dev/sda1 / ext3 defaults,usrquota,grpquota 0 0
+                    </div>
+                    <div class="info-box">
+                        <h4>📝 Options importantes :</h4>
+                        <p><strong>usrquota</strong> : Active les quotas utilisateurs<br>
+                        <strong>grpquota</strong> : Active les quotas de groupes<br>
+                        <strong>Options alternatives :</strong> <code>quota</code> (pour les deux types)</p>
+                    </div>
+                    <div class="warning-box">
+                        <h4>⚠️ Vérification importante</h4>
+                        <p>Après modification de /etc/fstab, vérifiez qu'il n'y a pas d'erreur de syntaxe avec : <code>mount -a</code>. Cette commande monte tous les systèmes de fichiers listés dans fstab sans redémarrer.</p>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-number">3</span>Remontage de la partition</h3>
+                    <p>Remonter la partition à chaud pour prendre en compte les modifications. Cette étape applique les nouvelles options sans nécessiter un redémarrage du système.</p>
+                    <div class="command-box">
+                        <button class="copy-btn" onclick="copyCommand(this)">Copier</button>
+                        mount -o remount /
+                    </div>
+                    <div class="info-box" style="margin-top: 15px;">
+                        <h4>💡 Alternative plus sûre</h4>
+                        <p>Pour éviter tout problème, vous pouvez redémarrer le système ou utiliser : <code>systemctl restart local-fs.target</code></p>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-number">4</span>Création du fichier de définition des quotas</h3>
+                    <p>Créer et configurer le fichier aquota.user. Ce fichier contiendra les informations de quotas pour tous les utilisateurs.</p>
+                    <div class="command-box">
+                        <button class="copy-btn" onclick="copyCommand(this)">Copier</button>
+                        touch /aquota.user
+                    </div>
+                    <div class="command-box">
+                        <button class="copy-btn" onclick="copyCommand(this)">Copier</button>
+                        chown root:root /aquota.user
+                    </div>
+                    <div class="command-box">
+                        <button class="copy-btn" onclick="copyCommand(this)">Copier</button>
+                        chmod 600 /aquota.user
+                    </div>
+                    <div class="info-box">
+                        <h4>📁 Fichiers de quotas</h4>
+                        <p><strong>aquota.user</strong> : Quotas par utilisateur<br>
+                        <strong>aquota.group</strong> : Quotas par groupe<br>
+                        Ces fichiers doivent être créés à la racine de chaque partition où les quotas sont activés.</p>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-number">5</span>Initialisation du système de quotas</h3>
+                    <p>Faire prendre conscience au système de l'existence du fichier de quotas. Cette commande scanne le système de fichiers et initialise les fichiers de quotas.</p>
+                    <div class="command-box">
+                        <button class="copy-btn" onclick="copyCommand(this)">Copier</button>
+                        quotacheck -ugv /dev/sda1
+                    </div>
+                    <div class="info-box">
+                        <h4>🔧 Options de quotacheck</h4>
+                        <p><strong>-u</strong> : Vérifie les quotas utilisateurs<br>
+                        <strong>-g</strong> : Vérifie les quotas groupes<br>
+                        <strong>-v</strong> : Mode verbeux (affichage détaillé)<br>
+                        <strong>-a</strong> : Vérifie toutes les partitions avec quotas<br>
+                        <strong>-m</strong> : Force le scan même si le système est monté en lecture/écriture</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuration Section -->
+            <div id="config" class="section">
+                <h2 style="color: #2d3436; margin-bottom: 30px;">⚙️ Configuration des Quotas</h2>
+
+                <div class="warning-box">
+                    <h4>⚠️ Important : Unités de mesure</h4>
+                    <p>Les valeurs des quotas sont toujours définies en <strong>Ko (Kilooctets)</strong>. N'oubliez pas de convertir les Mo en Ko (× 1024). Les quotas peuvent également être définis en nombre d'inodes (nombre de fichiers).</p>
+                </div>
+
+                <div class="step">
+                    <h3>Concepts clés des quotas</h3>
+                    <div class="details-list">
+                        <div class="details-item">
+                            <h4>Limite Souple (Soft Limit)</h4>
+                            <p>L'utilisateur peut temporairement dépasser cette limite pendant la période de grâce (grace period). Après cette période, le système empêche la création de nouveaux fichiers.</p>
+                        </div>
+                        <div class="details-item">
+                            <h4>Limite Stricte (Hard Limit)</h4>
+                            <p>Limite absolue qui ne peut jamais être dépassée. Le système bloque immédiatement toute tentative de dépassement.</p>
+                        </div>
+                        <div class="details-item">
+                            <h4>Période de Grâce (Grace Period)</h4>
+                            <p>Durée pendant laquelle l'utilisateur peut dépasser la limite souple. Par défaut 7 jours.</p>
+                        </div>
+                        <div class="details-item">
+                            <h4>Inodes vs Blocs</h4>
+                            <p><strong>Blocs :</strong> Limite d'espace disque<br>
+                            <strong>Inodes :</strong> Limite du nombre de fichiers</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3>Configuration pour un utilisateur</h3>
+                    <p><strong>Exemple :</strong> Définir un quota pour l'utilisateur "sri2" avec les paramètres suivants :</p>
+                    <ul style="margin: 15px 0; padding-left: 20px;">
+                        <li>Limite maximale (hard) : 500 Mo (512000 Ko)</li>
+                        <li>Limite souple (soft) : 450 Mo (460800 Ko)</li>
+                        <li>Période de grâce : 7 jours (défaut)</li>
+                    </ul>
+                    
+                    <div class="command-box">
+                        <button class="copy-btn" onclick="copyCommand(this)">Copier</button>
+                        edquota -u sri2 -f /dev/sda1
+                    </div>
+
+                    <div class="info-box">
+                        <h4>💡 Éditeur edquota</h4>
+                        <p>La commande <code>edquota</code> ouvre un éditeur (vi/nano) avec un tableau à remplir :</p>
+                        <pre style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 10px;">
+Filesystem    blocks    soft    hard    inodes    soft    hard
+/dev/sda1     500920    460800  512000  10        0       0</pre>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Système de fichiers</th>
+                                    <th>Blocs utilisés</th>
+                                    <th>Limite souple (Ko)</th>
+                                    <th>Limite stricte (Ko)</th>
+                                    <th>Inodes utilisés</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>/dev/sda1</td>
+                                    <td>500920</td>
+                                    <td>460800</td>
+                                    <td>512000</td>
+                                    <td>10</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="info-box">
+                        <h4>💡 Calcul des valeurs :</h4>
+                        <p><strong>Limite stricte :</strong> 500 Mo × 1024 = 512000 Ko<br>
+                        <strong>Limite souple :</strong> 450 Mo × 1024 = 460800 Ko<br>
+                        <strong>Conversion inverse :</strong> Ko ÷ 1024 = Mo</p>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3>Activation des quotas</h3>
+                    <p>Activer les quotas sur toutes les partitions après configuration. Cette commande active les quotas pour tous les utilisateurs et groupes.</p>
+                    <div class="command-box">
+                        <button class="copy-btn" onclick="copyCommand(this)">Copier</button>
+                        quotaon -aug
+                    </div>
+                    <div class="info-box" style="margin-top: 15px;">
+                        <h4>🔧 Options de quotaon</h4>
+                        <p><strong>-a</strong> : Active les quotas sur toutes les partitions<br>
+                        <strong>-u</strong> : Active les quotas utilisateurs<br>
+                        <strong>-g</strong> : Active les quotas groupes<br>
+                        <strong>-v</strong> : Mode verbeux</p>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3>Configuration pour un groupe</h3>
+                    <p>Définir un quota pour un groupe d'utilisateurs. Utile pour les départements ou équipes partageant un espace de stockage.</p>
+                    <div class="command-box">
+                        <button class="copy-btn" onclick="copyCommand(this)">Copier</button>
+                        edquota -g Marketing -f /dev/sda1
+                    </div>
+                    <div class="info-box">
+                        <h4>🎯 Utilisation pratique</h4>
+                        <p>Les quotas de groupe sont particulièrement utiles pour :<br>
+                        • Limiter l'espace d'un département<br>
+                        • Contrôler l'utilisation d'un projet collaboratif<br>
+                        • Gérer les ressources d'une équipe de développement</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test Section -->
+            <div id="test" class="section">
+                <h2 style="color: #2d3436; margin-bottom: 30px;">🧪 Tests et Vérifications</h2>
+
+                <div class="step">
+                    <h3>Visualiser les quotas actifs</h3>
+                    <p>Obtenir un rapport complet des quotas sur une partition spécifique.</p>
+                    <div class="command-box">
+                        <button class="copy-btn" onclick="copyCommand(this)">Copier</button>
+                        repquota /dev/sda1
+                    </div>
+                    
+                    <div class="info-box">
+                        <h4>📊 Interprétation du rapport</h4>
+                        <pre style="background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto;">
+*** Rapport pour les quotas user sur le périphérique /dev/sda1
+Période de sursis bloc : 7days
+
+                Limites bloc          Limites fichier
+Utilisateur    utilisé  souple  stricte  sursis  utilisé  souple  stricte  sursis
+-------------|---------|--------|---------|--------|--------|---------|--------
+root          35832    0        0                4        0        0
+sri2          502000   460800   512000   6days   10       0        0</pre>
+                        <p><strong>Symboles importants :</strong><br>
+                        • <code>+</code> : Dépassement de la limite souple<br>
+                        • <code>-</code> : Dépassement de la limite stricte<br>
+                        • <code>*</code> : Dépassement de la limite inode</p>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3>Test 1 : Créer un fichier de 490 Mo</h3>
+                    <p>Tester le niveau d'avertissement (limite souple). Ce test vérifie que le système avertit bien l'utilisateur lorsqu'il approche de sa limite.</p>
+                    <div class="command-box">
+                        <button class="copy-btn" onclick="copyCommand(this)">Copier</button>
+                        dd if=/dev/zero of=/home/sri2/quotatest bs=1024 count=490000
+                    </div>
+                    
+                    <div class="warning-box">
+                        <h4>⚠️ Comportement attendu :</h4>
+                        <p><code>sda1: warning, user block quota exceeded.</code></p>
+                        <p>Le fichier est créé mais un avertissement est affiché car le seuil d'alerte (450 Mo) est dépassé. L'utilisateur entre dans la période de grâce.</p>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3>Test 2 : Créer un fichier de 510 Mo</h3>
+                    <p>Tester la limite maximale (limite stricte). Ce test vérifie que le système bloque effectivement le dépassement de la limite absolue.</p>
+                    <div class="command-box">
+                        <button class="copy-btn" onclick="copyCommand(this)">Copier</button>
+                        dd if=/dev/zero of=/home/sri2/quotatest bs=1024 count=510000
+                    </div>
+                    
+                    <div class="warning-box">
+                        <h4>🚫 Comportement attendu :</h4>
+                        <p><code>sda1: write failed, user block limit reached.</code><br>
+                        <code>dd: écriture de '/home/sri2/quotatest': Débordement du quota d'espace disque</code></p>
+                        <p>Le système bloque la création du fichier au-delà de 500 Mo. Seuls 500 Mo sont effectivement écrits.</p>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3>Vérifier la taille du fichier créé</h3>
+                    <p>Confirmer que le fichier a bien été limité à la taille maximale autorisée.</p>
+                    <div class="command-box">
+                        <button class="copy-btn" onclick="copyCommand(this)">Copier</button>
+                        ls -lh /home/sri2/quotatest
+                    </div>
+                    <div class="info-box" style="margin-top: 15px;">
+                        <h4>📁 Résultat attendu :</h4>
+                        <p><code>-rw-r--r-- 1 sri2 sri2 500M jan 17 15:23 /home/sri2/quotatest</code><br>
+                        Le fichier fait exactement 500 Mo, confirmant que le quota a bien fonctionné.</p>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3>Vérification en temps réel</h3>
+                    <p>Vérifier l'état des quotas pour un utilisateur spécifique.</p>
+                    <div class="command-box">
+                        <button class="copy-btn" onclick="copyCommand(this)">Copier</button>
+                        quota -u sri2
+                    </div>
+                    <div class="info-box">
+                        <h4>📈 Sortie typique :</h4>
+                        <pre style="background: #f8f9fa; padding: 15px; border-radius: 5px;">
+Disk quotas for user sri2 (uid 1001):
+Filesystem  blocks  quota  limit  grace  files  quota  limit  grace
+/dev/sda1   502000  460800 512000  6days     10      0      0</pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gestion Section -->
+            <div id="gestion" class="section">
+                <h2 style="color: #2d3436; margin-bottom: 30px;">🔧 Gestion des Quotas</h2>
+
+                <div class="step">
+                    <h3>Désactiver les quotas sur une partition spécifique</h3>
+                    <p>Désactiver temporairement les quotas pour maintenance ou dépannage.</p>
+                    <div class="command-box">
+                        <button class="copy-btn" onclick="copyCommand(this)">Copier</button>
+                        quotaoff -au /dev/sda1
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3>Désactiver les quotas sur toutes les partitions</h3>
+                    <p>Désactiver complètement le système de quotas.</p>
+                    <div class="command-box">
+                        <button class="copy-btn" onclick="copyCommand(this)">Copier</button>
+                        quotaoff -au
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3>Vérifier l'état des quotas</h3>
+                    <p>Vérifier les quotas d'un utilisateur spécifique.</p>
+                    <div class="command-box">
+                        <button class="copy-btn" onclick="copyCommand(this)">Copier</button>
+                        quota -u nom_utilisateur
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3>Copier les quotas d'un utilisateur à un autre</h3>
+                    <p>Copier la configuration de quotas d'un utilisateur vers un autre. Très utile pour appliquer les mêmes limites à plusieurs utilisateurs.</p>
+                    <div class="command-box">
+                        <button class="copy-btn" onclick="copyCommand(this)">Copier</button>
+                        edquota -p utilisateur_source utilisateur_destination
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3>Mettre à jour les quotas manuellement</h3>
+                    <p>Forcer une mise à jour des fichiers de quotas après des modifications manuelles.</p>
+                    <div class="command-box">
+                        <button class="copy-btn" onclick="copyCommand(this)">Copier</button>
+                        quotacheck -ugvm
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <h4>📋 Commandes utiles récapitulatives :</h4>
+                    <table style="margin-top: 15px;">
+                        <thead>
+                            <tr>
+                                <th>Commande</th>
+                                <th>Description</th>
+                                <th>Utilisation</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>edquota -u user</code></td>
+                                <td>Éditer les quotas d'un utilisateur</td>
+                                <td>Configuration initiale</td>
+                            </tr>
+                            <tr>
+                                <td><code>edquota -g group</code></td>
+                                <td>Éditer les quotas d'un groupe</td>
+                                <td>Gestion d'équipe</td>
+                            </tr>
+                            <tr>
+                                <td><code>quotaon -aug</code></td>
+                                <td>Activer tous les quotas</td>
+                                <td>Après configuration</td>
+                            </tr>
+                            <tr>
+                                <td><code>quotaoff -au</code></td>
+                                <td>Désactiver tous les quotas</td>
+                                <td>Maintenance</td>
+                            </tr>
+                            <tr>
+                                <td><code>repquota /dev/sda1</code></td>
+                                <td>Rapport des quotas d'une partition</td>
+                                <td>Surveillance</td>
+                            </tr>
+                            <tr>
+                                <td><code>quotacheck -ugv</code></td>
+                                <td>Vérifier et mettre à jour les quotas</td>
+                                <td>Diagnostic</td>
+                            </tr>
+                            <tr>
+                                <td><code>quota -u user</code></td>
+                                <td>Afficher les quotas d'un utilisateur</td>
+                                <td>Vérification rapide</td>
+                            </tr>
+                            <tr>
+                                <td><code>edquota -p src dst</code></td>
+                                <td>Copier les quotas entre utilisateurs</td>
+                                <td>Déploiement massif</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="warning-box">
+                    <h4>🚨 Bonnes pratiques de gestion</h4>
+                    <p>1. <strong>Surveillance régulière :</strong> Utilisez <code>repquota</code> régulièrement<br>
+                    2. <strong>Journalisation :</strong> Configurez des alertes par email<br>
+                    3. <strong>Étapes graduelles :</strong> Augmentez les quotas progressivement<br>
+                    4. <strong>Communication :</strong> Informez les utilisateurs des limites<br>
+                    5. <strong>Sauvegarde :</strong> Sauvegardez les fichiers aquota.*</p>
+                </div>
+
+                <div class="image-placeholder" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                    <span style="position: relative; z-index: 1;">✅ Gestion Complète des Quotas</span>
+                </div>
+            </div>
+
+            <!-- Carte Mentale Section -->
+            <div id="mindmap" class="section">
+                <div class="mindmap-container">
+                    <div class="mindmap-title">🧠 Carte Mentale : Quotas Linux</div>
+                    
+                    <div class="mindmap-center">
+                        QUOTAS<br>LINUX
+                    </div>
+
+                    <div class="mindmap-branch">
+                        <!-- Branche 1 -->
+                        <div class="mindmap-node">
+                            <h4>🎯 Objectifs</h4>
+                            <div class="mindmap-subnode">Contrôler l'espace disque</div>
+                            <div class="mindmap-subnode">Prévenir la saturation</div>
+                            <div class="mindmap-subnode">Optimiser les ressources</div>
+                            <div class="mindmap-subnode">Surveiller l'utilisation</div>
+                            <div class="mindmap-subnode warning">Éviter les abus</div>
+                        </div>
+
+                        <!-- Branche 2 -->
+                        <div class="mindmap-node">
+                            <h4>⚙️ Installation</h4>
+                            <div class="mindmap-subnode">apt-get install quota</div>
+                            <div class="mindmap-subnode">Modifier /etc/fstab</div>
+                            <div class="mindmap-subnode info">usrquota, grpquota</div>
+                            <div class="mindmap-subnode">mount -o remount /</div>
+                            <div class="mindmap-subnode">quotacheck -ugv</div>
+                        </div>
+
+                        <!-- Branche 3 -->
+                        <div class="mindmap-node">
+                            <h4>🔧 Configuration</h4>
+                            <div class="mindmap-subnode">edquota -u utilisateur</div>
+                            <div class="mindmap-subnode info">Limite souple/stricte</div>
+                            <div class="mindmap-subnode">Conversion Mo → Ko</div>
+                            <div class="mindmap-subnode">quotaon -aug</div>
+                            <div class="mindmap-subnode warning">Unités en Ko uniquement</div>
+                        </div>
+
+                        <!-- Branche 4 -->
+                        <div class="mindmap-node">
+                            <h4>📊 Surveillance</h4>
+                            <div class="mindmap-subnode">repquota /dev/sda1</div>
+                            <div class="mindmap-subnode">quota -u utilisateur</div>
+                            <div class="mindmap-subnode info">Rapports détaillés</div>
+                            <div class="mindmap-subnode warning">Symboles + et -</div>
+                            <div class="mindmap-subnode">Période de grâce</div>
+                        </div>
+
+                        <!-- Branche 5 -->
+                        <div class="mindmap-node">
+                            <h4>🧪 Tests</h4>
+                            <div class="mindmap-subnode warning">dd pour créer fichiers</div>
+                            <div class="mindmap-subnode">Test limite souple</div>
+                            <div class="mindmap-subnode">Test limite stricte</div>
+                            <div class="mindmap-subnode info">ls -lh vérification</div>
+                            <div class="mindmap-subnode warning">Messages d'erreur</div>
+                        </div>
+
+                        <!-- Branche 6 -->
+                        <div class="mindmap-node">
+                            <h4>🛠️ Gestion</h4>
+                            <div class="mindmap-subnode">quotaoff désactivation</div>
+                            <div class="mindmap-subnode">edquota -p copie</div>
+                            <div class="mindmap-subnode info">Maintenance régulière</div>
+                            <div class="mindmap-subnode warning">Sauvegarde aquota</div>
+                            <div class="mindmap-subnode">Alertes et monitoring</div>
+                        </div>
+
+                        <!-- Branche 7 -->
+                        <div class="mindmap-node">
+                            <h4>📈 Types de quotas</h4>
+                            <div class="mindmap-subnode info">Par utilisateur</div>
+                            <div class="mindmap-subnode info">Par groupe</div>
+                            <div class="mindmap-subnode">Quotas blocs (espace)</div>
+                            <div class="mindmap-subnode">Quotas inodes (fichiers)</div>
+                            <div class="mindmap-subnode warning">Par partition uniquement</div>
+                        </div>
+
+                        <!-- Branche 8 -->
+                        <div class="mindmap-node">
+                            <h4>🚨 Erreurs courantes</h4>
+                            <div class="mindmap-subnode warning">Oubli remount</div>
+                            <div class="mindmap-subnode warning">Mauvaises unités</div>
+                            <div class="mindmap-subnode">Fichiers aquota manquants</div>
+                            <div class="mindmap-subnode">Permissions incorrectes</div>
+                            <div class="mindmap-subnode warning">FS non supporté</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <h4>💡 Comment utiliser cette carte mentale</h4>
+                    <p>Cette carte mentale résume visuellement tous les aspects importants des quotas Linux. Utilisez-la comme :</p>
+                    <ul style="margin: 15px 0; padding-left: 20px;">
+                        <li><strong>Guide de révision rapide</strong> avant un examen</li>
+                        <li><strong>Checklist</strong> lors de la mise en place des quotas</li>
+                        <li><strong>Aide-mémoire</strong> pour les commandes essentielles</li>
+                        <li><strong>Structure d'apprentissage</strong> pour comprendre les concepts</li>
+                    </ul>
+                    <p>Chaque branche représente un thème important, avec les sous-éléments clés à retenir.</p>
+                </div>
+
+                <div class="details-box">
+                    <h3>🎓 Points clés à retenir</h3>
+                    <div class="details-list">
+                        <div class="details-item">
+                            <h4>1. Installation & Activation</h4>
+                            <p>✓ Installation du paquet quota<br>
+                            ✓ Modification de /etc/fstab avec usrquota/grpquota<br>
+                            ✓ Remontage de la partition<br>
+                            ✓ Initialisation avec quotacheck</p>
+                        </div>
+                        <div class="details-item">
+                            <h4>2. Configuration</h4>
+                            <p>✓ Utilisation de edquota pour modifier les limites<br>
+                            ✓ Toujours spécifier les valeurs en Ko<br>
+                            ✓ Différence entre limite souple et stricte<br>
+                            ✓ Activation finale avec quotaon</p>
+                        </div>
+                        <div class="details-item">
+                            <h4>3. Surveillance & Tests</h4>
+                            <p>✓ repquota pour les rapports complets<br>
+                            ✓ quota pour vérification rapide<br>
+                            ✓ Tests avec dd pour valider les limites<br>
+                            ✓ Interprétation des messages d'erreur</p>
+                        </div>
+                        <div class="details-item">
+                            <h4>4. Bonnes Pratiques</h4>
+                            <p>✓ Surveillance régulière<br>
+                            ✓ Communication avec les utilisateurs<br>
+                            ✓ Sauvegarde des fichiers de quotas<br>
+                            ✓ Augmentation progressive des limites</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>💻 Formation BTS 2ème Année - Quotas de Disque sous Linux - Guide Complet</p>
+            <p style="margin-top: 10px; opacity: 0.8;">Utilisez la carte mentale pour une révision efficace ! 🎓</p>
+        </div>
+    </div>
+
+    <script>
+        function showSection(sectionId) {
+            // Hide all sections
+            const sections = document.querySelectorAll('.section');
+            sections.forEach(section => {
+                section.classList.remove('active');
+            });
+
+            // Remove active class from all buttons
+            const buttons = document.querySelectorAll('.nav-btn');
+            buttons.forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+
+            // Add active class to clicked button
+            event.target.classList.add('active');
+
+            // Scroll to top smoothly
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function copyCommand(button) {
+            const commandBox = button.parentElement;
+            const commandText = commandBox.textContent.replace('Copier', '').replace('$ ', '').trim();
+            
+            navigator.clipboard.writeText(commandText).then(() => {
+                button.textContent = '✓ Copié !';
+                button.style.background = '#00b894';
+                
+                setTimeout(() => {
+                    button.textContent = 'Copier';
+                    button.style.background = '#00b894';
+                }, 2000);
+            });
+        }
+
+        // Initialize mindmap connections
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add connection lines for mindmap
+            const mindmapNodes = document.querySelectorAll('.mindmap-node');
+            const mindmapCenter = document.querySelector('.mindmap-center');
+            
+            // This would be enhanced with SVG lines in a production environment
+            // For this example, we're using CSS gradients as placeholders
+        });
+    </script>
+</body>
+</html>
